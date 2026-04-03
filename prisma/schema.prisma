@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String @id @default(uuid())
+  email         String @unique
+  passwordHash  String
+
+  // Because we only have three tiers, and I want to allow per-user overrides for enterprise customers. Extracting a Tier table adds a join to every auth check for no real benefit at our scale.
+  tier          String @default("free")
+  tokensUsed    Int @default(0)
+  tokenLimit    Int @default(10000)
+
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  documents     Document[]
+  conversations Conversation[]
+  usageLogs     UsageLog[]
+}
+
+model Document {
+  id            String @id @default(uuid())
+  userId        String
+  title         String
+  filename      String
+  content       String
+  mimeType      String?
+  fileSizeBytes Int?
+  chunkCount    Int @default(0)
+  status        String @default("pending")
+  error         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks        Chunk[]
+  messages      Message[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Chunk {
+  id         String @id @default(uuid())
+  documentId String
+  index      Int
+  content    String
+  tokenCount Int
+  createdAt  DateTime @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@unique([documentId, index])
+}
+
+model Conversation {
+  id        String @id @default(uuid())
+  userId    String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id               String @id @default(uuid())
+  conversationId   String
+  documentId       String?
+  role             String // "user" or "assistant"
+  content          String
+  sources          String? // JSON: chunk IDs used as context
+  confidence       String? // "high", "medium", "low"
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float? // should be decimal
+  latencyMs        Int?
+  createdAt        DateTime @default(now())
+
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  document         Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([documentId])
+}
+
+model UsageLog {
+  id        String @id @default(uuid())
+  userId    String
+  action    String // "embed", "chat", "upload"
+  tokens    Int
+  costUsd   Float
+  metadata  String? // JSON
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AITrace {
+  id        String @id @default(uuid())
+  traceId   String @unique
+  userId    String?
+  operation String
+  data      String // JSON
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([operation])
+}
