@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { prisma } from './src/lib/prisma';
 import fs from 'fs';
 import express from 'express';
 import morgan from 'morgan';
@@ -22,3 +23,15 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
