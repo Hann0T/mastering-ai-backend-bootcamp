@@ -2,3 +2,4 @@ node_modules/
 logs/
 .env
 generated/prisma
+dev.db
