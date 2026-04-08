@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import './src/events/auth.events';
 import { prisma } from './src/lib/prisma';
 import fs from 'fs';
 import express from 'express';
