@@ -1,5 +1,6 @@
-import app from './app';
+import 'dotenv/config';
 import './src/events/auth.events';
+import app from './app';
 import { prisma } from './src/lib/prisma';
 
 const port = process.env.PORT || 3000;
