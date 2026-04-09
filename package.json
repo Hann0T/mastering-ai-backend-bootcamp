@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "dev": "tsx app.ts"
+    "dev": "tsx server.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.6.0",
