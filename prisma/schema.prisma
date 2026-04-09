@@ -33,9 +33,9 @@ model User {
 }
 
 model RefreshToken {
-  id String @id @default(uuid())
-  userId String
-  token String
+  id        String @id @default(uuid())
+  userId    String
+  token     String @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
 
