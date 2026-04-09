@@ -42,6 +42,21 @@ eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: any) => {
   }
 });
 
+eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: { email: string }) => {
+  try {
+    // Race: either the notification finishes in 3 seconds, or we give up
+    // await Promise.race([
+    //   notifySlack(`New signup: ${user.email}`),
+    //   new Promise((_, reject) =>
+    //     setTimeout(() => reject(new Error('Slack timeout')), 3000)
+    //   ),
+    // ]);
+  } catch (error) {
+    console.error('Slack notification failed or timed out:', error);
+  }
+});
+
+
 eventBus.on(AUTH_EVENTS.USER_LOGGED_IN, async (data: any) => {
   try {
     await prisma.usageLog.create({
