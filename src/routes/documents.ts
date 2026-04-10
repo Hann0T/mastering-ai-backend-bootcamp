@@ -10,7 +10,7 @@ import {
   createDocumentHandler,
   deleteDocumentHandler,
   getDocumentHandler,
-  listDocuments
+  listDocumentsHandler
 } from '../controllers/document.controller';
 import { validate } from '../middleware/validate.middleware';
 
@@ -50,7 +50,7 @@ router.use(authenticate);
  */
 router.get('/',
   validate(listDocumentsSchema),
-  listDocuments
+  listDocumentsHandler
 );
 
 router.post('/',
