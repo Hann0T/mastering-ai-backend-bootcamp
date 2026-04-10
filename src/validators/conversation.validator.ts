@@ -1,8 +1,21 @@
 import { z } from 'zod';
 
+export const getConversationsSchema = z.object({
+  query: z.object({
+    page: z.coerce.number().min(1).default(1),
+    limit: z.coerce.number().min(1).max(100).default(20),
+    status: z.enum(['pending', 'processing', 'ready', 'failed']).optional(),
+  })
+});
+
+export const getConversationSchema = z.object({
+  params: z.object({
+    id: z.uuid('Invalid conversation ID'),
+  })
+});
+
 export const createConversationSchema = z.object({
   body: z.object({
-    documentId: z.uuid('Invalid document ID format'),
     title: z.string().max(200).optional(),
   })
 });
