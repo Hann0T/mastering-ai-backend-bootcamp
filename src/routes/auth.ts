@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import * as authService from '../services/auth.service';
 import { validate } from '../middleware/validate.middleware';
 import {
   loginSchema,
@@ -7,58 +6,33 @@ import {
   refreshTokenSchema,
   registerSchema
 } from '../validators/auth.validator';
+import {
+  loginHandler,
+  logoutHandler,
+  refreshTokenHandler,
+  registerHandler
+} from '../controllers/auth.controller';
 
 const router = Router();
 
 router.post('/register',
   validate(registerSchema),
-  async (req, res, next) => {
-    try {
-      const user = await authService.register(req.body);
-      res.status(201).json({ user });
-    } catch (error) {
-      next(error);
-    }
-  }
+  registerHandler
 );
 
 router.post('/login',
   validate(loginSchema),
-  async (req, res, next) => {
-    try {
-      const result = await authService.login({
-        ...req.body,
-        deviceInfo: req.headers['user-agent'],
-      });
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
+  loginHandler
 );
 
 router.post('/refresh',
   validate(refreshTokenSchema),
-  async (req, res, next) => {
-    try {
-      const result = await authService.refresh(req.body.refreshToken);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
+  refreshTokenHandler
 );
 
 router.post('/logout',
   validate(logoutSchema),
-  async (req, res, next) => {
-    try {
-      await authService.logout(req.body.refreshToken);
-      res.json({ message: 'Logged out' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  logoutHandler
 );
 
 export default router;
