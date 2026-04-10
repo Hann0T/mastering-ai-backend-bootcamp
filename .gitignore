@@ -1,5 +1,7 @@
 node_modules/
 logs/
 .env
+.env.test
 generated/prisma
 dev.db
+test.db

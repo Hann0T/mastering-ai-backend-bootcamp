@@ -22,9 +22,12 @@ export function validate<T extends RequestSchema>(schema: T) {
       }));
 
       return res.status(400).json({
-        code: 'VALIDATION_ERROR',
-        message: 'Request validation failed',
-        details: errors,
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          details: errors,
+        }
       });
     }
 
