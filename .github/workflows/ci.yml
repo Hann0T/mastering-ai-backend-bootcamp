@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: docuChat
 
     steps:
       - uses: actions/checkout@v4
@@ -33,8 +34,8 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: file:${{ github.workspace }}/test.db
-          JWT_ACCESS_SECRET: b50f17672f6b36f552560952ecdfe340e0ec090f73fdb5eb2121a54831eb1827
-          JWT_REFRESH_SECRET: 8a5d94c409b2f647ed9a8fed72b7c5d8e4cbbfdcd5f0c19452311e899be961de
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           NODE_ENV: test
         run: npm run test:coverage
 
