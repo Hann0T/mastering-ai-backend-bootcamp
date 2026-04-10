@@ -30,8 +30,9 @@ export function validate<T extends RequestSchema>(schema: T) {
 
     // replace the original request data with the validated and transformed data
     req.body = result.data.body ?? req.body;
-    req.query = result.data.query ?? req.query;
     req.params = result.data.params ?? req.params;
+    // req.query = result.data.query ?? req.query; // error, why
+    Object.assign(req.query, result.data.query); // better way to do this?
 
     next();
   };
