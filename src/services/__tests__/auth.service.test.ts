@@ -9,6 +9,12 @@ vi.mock('../../lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    usageLog:{
+      create: vi.fn(),
+    },
+    conversation:{
+      create: vi.fn(),
+    },
     refreshToken: {
       create: vi.fn(),
       findUnique: vi.fn(),
