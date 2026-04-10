@@ -8,12 +8,13 @@ import {
   generateRefreshToken,
   verifyRefreshToken
 } from '../lib/tokens';
+import { ConflictError, UnauthorizedError } from '../lib/errors';
 
 export async function register(data: { email: string, password: string }) {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email.toLowerCase().trim() }
   });
-  if (existingUser) throw new Error('Email already in use');
+  if (existingUser) throw new ConflictError('Email already in use');
 
   const passwordHash = await hashPassword(data.password);
   const user = await prisma.user.create({
@@ -40,7 +41,7 @@ export async function login(data: { email: string, password: string, deviceInfo?
     eventBus.emit(AUTH_EVENTS.LOGIN_FAILED, {
       email: data.email, reason: 'User not found', deviceInfo: data.deviceInfo || 'unknown'
     });
-    throw new Error('Invalid credentials');
+    throw new UnauthorizedError('Invalid credentials');
   }
 
   const isValid = await verifyPassword(data.password, user.passwordHash);
@@ -48,7 +49,7 @@ export async function login(data: { email: string, password: string, deviceInfo?
     eventBus.emit(AUTH_EVENTS.LOGIN_FAILED, {
       email: data.email, reason: 'wrong_password', deviceInfo: data.deviceInfo || 'unknown'
     });
-    throw new Error('Invalid credentials');
+    throw new UnauthorizedError('Invalid credentials');
   }
 
   const accessToken = generateAccessToken(user);
@@ -81,11 +82,11 @@ export async function refresh(rawRefreshToken: string) {
   try {
     payload = verifyRefreshToken(rawRefreshToken);
   } catch (err) {
-    throw new Error('Invalid refresh token');
+    throw new UnauthorizedError('Invalid refresh token');
   }
 
   if (payload.type !== 'refresh') {
-    throw new Error('Invalid token type');
+    throw new UnauthorizedError('Invalid token type');
   }
 
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
@@ -94,14 +95,14 @@ export async function refresh(rawRefreshToken: string) {
   });
 
   if (!storedToken || storedToken.expiresAt < new Date()) {
-    throw new Error('Refresh token expired or revoked');
+    throw new UnauthorizedError('Refresh token expired or revoked');
   }
 
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
   });
   if (!user || !user.isActive) {
-    throw new Error('User not found or inactive');
+    throw new UnauthorizedError('Invalid refresh token');
   }
 
   await prisma.refreshToken.delete({

@@ -1,7 +1,7 @@
 import express from 'express';
 import apiRouter from './src/routes/api';
 import logger from './src/middleware/logger';
-import { errorHandler } from './src/middleware/error';
+import { errorHandler } from './src/middleware/errorHandler.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
 
@@ -20,7 +20,14 @@ app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
 
-// error handling
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: { code: 'NOT_FOUND', message: `Route ${req.path} not found` }
+  });
+});
+
+// global error handling (MUST BE LAST)
 app.use(errorHandler);
 
 export default app;
