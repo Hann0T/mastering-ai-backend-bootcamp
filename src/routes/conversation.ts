@@ -1,11 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
-import { authorize } from '../middleware/authorize';
-import {
-  createDocumentSchema,
-  documentParamsSchema,
-  listDocumentsSchema
-} from '../validators/document.validator';
+import { requirePermission } from '../middleware/authorize';
 import { validate } from '../middleware/validate.middleware';
 import {
   createConversationSchema,
@@ -29,11 +24,13 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/',
+  requirePermission('conversations:read'),
   validate(getConversationsSchema),
   getConversationsHandler
 );
 
 router.post('/',
+  requirePermission('conversations:create'),
   validate(createConversationSchema),
   createConversationHandler
 );

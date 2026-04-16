@@ -24,6 +24,19 @@ export async function register(data: { email: string, password: string }) {
     }
   });
 
+  const defaultRole = await prisma.role.findFirst({
+    where: { isDefault: true }
+  });
+
+  if (defaultRole) {
+    await prisma.userRole.create({
+      data: {
+        userId: user.id,
+        roleId: defaultRole.id
+      }
+    });
+  }
+
   eventBus.emit(AUTH_EVENTS.USER_REGISTERED, {
     id: user.id,
     email: user.email,

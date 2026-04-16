@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
-import { authorize } from '../middleware/authorize';
+import { authorize, requirePermission } from '../middleware/authorize';
 import {
   createDocumentSchema,
   documentParamsSchema,
@@ -49,24 +49,27 @@ router.use(authenticate);
  *         description: Not authenticated
  */
 router.get('/',
+  requirePermission('documents:read'),
   validate(listDocumentsSchema),
   listDocumentsHandler
 );
 
 router.post('/',
+  requirePermission('documents:create'),
   validate(createDocumentSchema),
   createDocumentHandler
 );
 
 router.get('/:id',
+  requirePermission('documents:read'),
   validate(documentParamsSchema),
   getDocumentHandler
 );
 
 router.delete(
   '/:id',
+  requirePermission('admin:documents:delete'),
   validate(documentParamsSchema),
-  authorize('enterprise'),
   deleteDocumentHandler
 );
 
