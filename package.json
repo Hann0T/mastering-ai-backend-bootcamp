@@ -4,7 +4,7 @@
     "dev": "tsx server.ts",
     "test": "dotenv -e .env.test -- vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "dotenv -e .env.test -- vitest run --coverage"
   },
   "dependencies": {
     "@bull-board/api": "^7.0.0",
