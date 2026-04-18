@@ -1,5 +1,6 @@
 import express from 'express';
 import apiRouter from './src/routes/api';
+import webhookRouter from './src/routes/webhooks';
 import logger from './src/middleware/logger';
 import { errorHandler } from './src/middleware/errorHandler.middleware';
 import swaggerUi from 'swagger-ui-express';
@@ -10,6 +11,17 @@ const app = express();
 
 // pre-route middlewares
 app.use(logger);
+
+app.use('/webhooks',
+  express.raw({
+    type: 'application/json',
+    verify: (req: any, _, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+  webhookRouter
+);
+
 app.use(express.json());
 
 // routes
@@ -21,7 +33,7 @@ app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
 
-// use auth middleware
+// TODO: use auth middleware
 app.use('/admin/queues', bullBoardAdapter.getRouter());
 
 app.use((req, res) => {
