@@ -17,6 +17,19 @@ openaiClient.interceptors.request.use((config) => {
   return config;
 });
 
+openaiClient.interceptors.response.use((response) => {
+  const remaining = parseInt(
+    response.headers['x-ratelimit-remaining-requests'] || '999'
+  );
+
+  if (remaining < 50) {
+    // TODO: slow down the requests
+    console.warn(`OpenAI rate limit getting low: ${remaining} remaining`);
+  }
+
+  return response;
+})
+
 openaiClient.interceptors.response.use(
   (response) => {
     const startTime = (response.config as any)?.metadata?.startTime;
