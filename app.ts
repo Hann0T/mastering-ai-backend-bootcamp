@@ -4,6 +4,7 @@ import logger from './src/middleware/logger';
 import { errorHandler } from './src/middleware/errorHandler.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
+import { bullBoardAdapter } from './src/config/bull-board';
 
 const app = express();
 
@@ -19,6 +20,9 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
+
+// use auth middleware
+app.use('/admin/queues', bullBoardAdapter.getRouter());
 
 app.use((req, res) => {
   res.status(404).json({
