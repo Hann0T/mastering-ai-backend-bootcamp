@@ -22,3 +22,22 @@ export async function createTestUser(overrides = {}) {
     },
   });
 }
+
+export async function assingRoles(userId: string, ...roles: string[]) {
+  for (const roleName of roles) {
+    const role = await prisma.role.findFirst({
+      where: { name: roleName }
+    });
+    if (!role) throw new Error('Role not found');
+
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId, roleId: role.id } },
+      update: {},
+      create: {
+        userId,
+        roleId: role.id,
+        assignedBy: userId,
+      },
+    });
+  }
+}

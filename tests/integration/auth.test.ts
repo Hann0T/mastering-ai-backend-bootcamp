@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resetDatabase, createTestUser } from '../helpers/setup';
+import { resetDatabase, createTestUser, assingRoles } from '../helpers/setup';
 import request from 'supertest';
 import app from '../../app';
 
@@ -88,7 +88,8 @@ describe('Protected routes', () => {
 
   beforeEach(async () => {
     await resetDatabase();
-    await createTestUser({ email: 'user@example.com' });
+    const user = await createTestUser({ email: 'user@example.com' });
+    await assingRoles(user.id, 'member');
 
     const login = await request(app)
       .post('/api/v1/auth/login')
