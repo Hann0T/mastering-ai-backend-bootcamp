@@ -1,19 +1,18 @@
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { NotFoundError } from '../lib/errors';
-import { getUserPermissions } from '../services/rbac.service';
-import { createDocument, deleteDocument, getDocument, listDocuments, type ListDocumentsOptions } from '../services/document.service';
+import { createDocument, deleteDocument, getDocument, listDocuments } from '../services/document.service';
 import { documentQueue, queueDocumentForProcessing } from '../queues/document.queue';
 import { DOC_EVENTS } from '../events/document.events';
 import { eventBus } from '../lib/events';
 
 export async function listDocumentsHandler(
-  req: Request<{}, {}, {}, ListDocumentsOptions>,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const docs = await listDocuments(req.user!.id, req.query);
+    const docs = await listDocuments(req.user!.id, (req as any).validated.query);
     res.json({ success: true, ...docs });
   } catch (error) {
     next(error);
