@@ -10,7 +10,8 @@ import {
   createDocumentHandler,
   deleteDocumentHandler,
   getDocumentHandler,
-  listDocumentsHandler
+  listDocumentsHandler,
+  processingStatus
 } from '../controllers/document.controller';
 import { validate } from '../middleware/validate.middleware';
 
@@ -72,5 +73,12 @@ router.delete(
   validate(documentParamsSchema),
   deleteDocumentHandler
 );
+
+router.get(
+  '/:id/processing-status',
+  authenticate,
+  requirePermission('documents:read'),
+  processingStatus
+)
 
 export default router;

@@ -93,13 +93,6 @@ export async function createDocument(userId: string, title: string, content: str
     }
   });
 
-  eventBus.emit(DOC_EVENTS.CREATED, {
-    userId: userId,
-    documentId: doc.id,
-    title: doc.title,
-    fileSizeBytes: doc.fileSizeBytes,
-  });
-
   return doc;
 }
 
