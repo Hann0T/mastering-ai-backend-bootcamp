@@ -23,7 +23,7 @@ export const createMessageSchema = z.object({
     conversationId: z.uuid('Invalid conversation ID'),
   }),
   body: z.object({
-    role: z.enum(['user', 'assistant']),
     content: z.string().max(500),
+    documentId: z.uuid('Invalid document ID').optional(),
   })
 });

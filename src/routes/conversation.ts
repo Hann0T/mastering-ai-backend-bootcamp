@@ -13,7 +13,7 @@ import {
   getConversationsHandler
 } from '../controllers/conversation.controller';
 import {
-  createMessageHandler,
+  sendMessageHandler,
   getMessageHandler,
   getMessagesHandler
 } from '../controllers/message.controller';
@@ -47,7 +47,7 @@ router.get('/:conversationId/messages',
 
 router.post('/:conversationId/messages',
   validate(createMessageSchema),
-  createMessageHandler
+  sendMessageHandler
 );
 
 router.get('/:conversationId/messages/:messageId',

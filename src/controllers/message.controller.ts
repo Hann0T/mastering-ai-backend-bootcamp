@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
+import { sendMessage } from '../services/conversation.service';
 
 type Params = {
   conversationId: string;
@@ -22,14 +23,17 @@ export async function getMessageHandler(req: Request<Params>, res: Response, _: 
   res.json({ success: true, message });
 }
 
-export async function createMessageHandler(req: Request<Params>, res: Response, _: NextFunction) {
-  const message = await prisma.message.create({
-    data: {
-      role: req.body.role,
+export async function sendMessageHandler(req: Request<Params>, res: Response, next: NextFunction) {
+  try {
+    const result = await sendMessage({
+      conversationId: req.params.conversationId,
+      userId: req.user!.id,
       content: req.body.content,
-      conversation: { connect: { id: req.params.conversationId } }
-    }
-  });
+      documentId: req.body.documentId ?? null,
+    });
 
-  res.json({ success: true, message });
+    res.json({ success: true, ...result });
+  } catch(error) {
+    next(error);
+  }
 }
