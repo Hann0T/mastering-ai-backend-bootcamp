@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import './src/events/auth.events';
 import './src/events/admin.events';
+import './src/events/document.events';
 
 import app from './app';
 import { prisma } from './src/lib/prisma';
