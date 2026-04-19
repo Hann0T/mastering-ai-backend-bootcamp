@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ConflictError, UnauthorizedError } from '../../lib/errors';
 import { AuthService } from '../../services/auth.service';
-import * as TokenService from '../../lib/tokens';
 
 const prismaMock = {
   user: {
@@ -30,13 +30,22 @@ const eventBusMock = {
   on: vi.fn()
 } as any;
 
-const authService = new AuthService(
-  TokenService, prismaMock, eventBusMock
-);
+const tokenServiceMock = {
+  generateAccessToken: vi.fn(),
+  generateRefreshToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+} as any;
+
+let authService: AuthService;
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  authService = new AuthService(
+    tokenServiceMock, prismaMock, eventBusMock
+  );
+})
 
 describe('auth.service.register', () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it('creates a user with a hashed password', async () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
     prismaMock.user.create.mockResolvedValue({
@@ -65,8 +74,6 @@ describe('auth.service.register', () => {
 });
 
 describe('auth.service.login', () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it('returns tokens for valid credentials', async () => {
     const bcrypt = await import('bcryptjs');
     const hash = await bcrypt.hash('SecurePass!', 12);
@@ -78,6 +85,8 @@ describe('auth.service.login', () => {
       passwordHash: hash,
     });
     prismaMock.refreshToken.create.mockResolvedValue({});
+    tokenServiceMock.generateAccessToken.mockImplementation(() => 'access-token');
+    tokenServiceMock.generateRefreshToken.mockImplementation(() => 'refresh-token');
 
     const result = await authService.login({
       email: 'test@example.com',
@@ -119,5 +128,131 @@ describe('auth.service.login', () => {
         password: 'Whatever1',
       })
     ).rejects.toThrow('Invalid credentials');
+  });
+});
+
+describe('auth.service.refresh', () => {
+  it('throws unathorized for invalid refresh token', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => {
+      throw new Error('Test');
+    });
+
+    await expect(
+      authService.refresh('invalid-token')
+    ).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('throws unathorized for different type of token', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => ({
+      sub: 'test-uuid-1',
+      type: 'not-refresh'
+    }));
+
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow('Invalid token type');
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('throws unathorized for expired token', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => ({
+      sub: 'test-uuid-1',
+      type: 'refresh'
+    }));
+
+    const pastDate = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: pastDate,
+    });
+
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow('Refresh token expired or revoked');
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('throws unathorized for invalid or inactive user', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => ({
+      sub: 'test-uuid-1',
+      type: 'refresh'
+    }));
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000);
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: futureDate,
+    });
+    prismaMock.user.findUnique.mockResolvedValue({
+      isActive: false,
+    });
+
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow('Invalid refresh token');
+    await expect(
+      authService.refresh('valid-token')
+    ).rejects.toThrow(UnauthorizedError);
+  });
+
+  it('should delete current refresh token and create a new one', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => ({
+      sub: 'test-uuid-1',
+      type: 'refresh'
+    }));
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000);
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: futureDate,
+    });
+    prismaMock.user.findUnique.mockImplementation((data: any) => {
+      if (data?.where?.id === 'test-uuid-1') {
+        return Promise.resolve({
+          id: 'test-uuid-1',
+          isActive: true
+        });
+      }
+
+      return Promise.resolve(null);
+    });
+    tokenServiceMock.generateRefreshToken.mockImplementation(() => 'new-refresh-token');
+
+    await authService.refresh('valid-token');
+
+    expect(prismaMock.refreshToken.delete).toHaveBeenCalled();
+    expect(prismaMock.refreshToken.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'test-uuid-1',
+      }),
+    });
+  });
+
+  it('should return the rotated token', async () => {
+    tokenServiceMock.verifyRefreshToken.mockImplementation(() => ({
+      sub: 'test-uuid-1',
+      type: 'refresh'
+    }));
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000);
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      expiresAt: futureDate,
+    });
+    prismaMock.user.findUnique.mockImplementation((data: any) => {
+      if (data?.where?.id === 'test-uuid-1') {
+        return Promise.resolve({
+          id: 'test-uuid-1',
+          email: 'test@mail.com',
+          isActive: true
+        });
+      }
+
+      return Promise.resolve(null);
+    });
+    tokenServiceMock.generateAccessToken.mockImplementation(() => 'new-access-token');
+    tokenServiceMock.generateRefreshToken.mockImplementation(() => 'new-refresh-token');
+
+    const result = await authService.refresh('valid-token');
+    expect(result.accessToken).toBe('new-access-token');
+    expect(result.refreshToken).toBe('new-refresh-token');
+    expect(result.user.email).toBe('test@mail.com');
   });
 });
