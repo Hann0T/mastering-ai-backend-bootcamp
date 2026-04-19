@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 const ACCESS_KEY = `${process.env.JWT_ACCESS_SECRET}`;
 const REFRESH_KEY = `${process.env.JWT_REFRESH_SECRET}`;
 
-interface TokenPayload {
+export interface TokenPayload {
   sub: string;
   role: string;
   type: 'access' | 'refresh';

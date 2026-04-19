@@ -1,5 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
-import * as authService from '../services/auth.service';
+import { eventBus } from "../lib/events";
+import { prisma } from "../lib/prisma";
+import {AuthService} from '../services/auth.service';
+import * as TokenService from '../lib/tokens';
+
+const authService = new AuthService(
+  TokenService, prisma, eventBus
+);
 
 export async function registerHandler(req: Request, res: Response, next: NextFunction) {
   try {

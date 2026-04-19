@@ -1,44 +1,45 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { prisma } from '../../lib/prisma';
-import { ConflictError, UnauthorizedError } from '../../lib/errors';
-import * as authService from '../auth.service';
+import { AuthService } from '../../services/auth.service';
+import * as TokenService from '../../lib/tokens';
 
-vi.mock('../../lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-    },
-    role: {
-      findFirst: vi.fn(),
-      create: vi.fn(),
-    },
-    usageLog:{
-      create: vi.fn(),
-    },
-    conversation:{
-      create: vi.fn(),
-    },
-    refreshToken: {
-      create: vi.fn(),
-      findUnique: vi.fn(),
-      delete: vi.fn(),
-      deleteMany: vi.fn(),
-    }
+const prismaMock = {
+  user: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+  },
+  role: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+  },
+  usageLog: {
+    create: vi.fn(),
+  },
+  conversation: {
+    create: vi.fn(),
+  },
+  refreshToken: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
   }
-}));
+} as any;
 
-// not working, better to inject the event bus to the service instead of an import
-vi.mock('../lib/events', () => ({
-  eventBus: { emit: vi.fn(), on: vi.fn() },
-}));
+const eventBusMock = {
+  emit: vi.fn(),
+  on: vi.fn()
+} as any;
+
+const authService = new AuthService(
+  TokenService, prismaMock, eventBusMock
+);
 
 describe('auth.service.register', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('creates a user with a hashed password', async () => {
-    (prisma.user.findUnique as any).mockResolvedValue(null);
-    (prisma.user.create as any).mockResolvedValue({
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({
       id: 'uuid-1',
       email: 'test@example.com',
       tier: 'free',
@@ -50,7 +51,7 @@ describe('auth.service.register', () => {
       password: 'securePass!'
     });
 
-    expect(prisma.user.create).toHaveBeenCalledWith({
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
       data: {
         email: 'test@example.com',
         passwordHash: expect.stringMatching(/^\$2[aby]\$/),
@@ -69,15 +70,14 @@ describe('auth.service.login', () => {
   it('returns tokens for valid credentials', async () => {
     const bcrypt = await import('bcryptjs');
     const hash = await bcrypt.hash('SecurePass!', 12);
-
-    (prisma.user.findUnique as any).mockResolvedValue({
+    prismaMock.user.findUnique.mockResolvedValue({
       id: 'uuid-1',
       email: 'test@example.com',
       tier: 'free',
       isActive: true,
       passwordHash: hash,
     });
-    (prisma.refreshToken.create as any).mockResolvedValue({});
+    prismaMock.refreshToken.create.mockResolvedValue({});
 
     const result = await authService.login({
       email: 'test@example.com',
@@ -93,14 +93,14 @@ describe('auth.service.login', () => {
     const bcrypt = await import('bcryptjs');
     const hash = await bcrypt.hash('SecurePass!', 12);
 
-    (prisma.user.findUnique as any).mockResolvedValue({
+    prismaMock.user.findUnique.mockResolvedValue({
       id: 'uuid-1',
       email: 'test@example.com',
       tier: 'free',
       isActive: true,
       passwordHash: hash,
     });
-    (prisma.refreshToken.create as any).mockResolvedValue({});
+    prismaMock.refreshToken.create.mockResolvedValue({});
 
     await expect(
       authService.login({
@@ -110,8 +110,8 @@ describe('auth.service.login', () => {
     ).rejects.toThrow('Invalid credentials');
   });
 
-  it('throws the same error for non-existent user', async() => {
-    (prisma.user.findUnique as any).mockResolvedValue(null);
+  it('throws the same error for non-existent user', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
 
     await expect(
       authService.login({
