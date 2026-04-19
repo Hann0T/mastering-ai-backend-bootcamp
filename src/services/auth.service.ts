@@ -101,6 +101,57 @@ export class AuthService {
     };
   }
 
+  async refresh(rawRefreshToken: string) {
+    let payload = null;
+    try {
+      payload = this.tokenService.verifyRefreshToken(rawRefreshToken);
+    } catch (err) {
+      throw new UnauthorizedError('Invalid refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedError('Invalid token type');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: tokenHash },
+    });
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      throw new UnauthorizedError('Refresh token expired or revoked');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedError('Invalid refresh token');
+    }
+
+    await this.prisma.refreshToken.delete({
+      where: { token: tokenHash }
+    });
+
+    const newAccessToken = this.tokenService.generateAccessToken(user);
+    const newRefreshToken = this.tokenService.generateRefreshToken(user);
+    const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: newTokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: { id: user.id, email: user.email, tier: user.tier }
+    };
+  }
+
   async logout(rawRefreshToken: string) {
     const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
     await this.prisma.refreshToken.deleteMany({
