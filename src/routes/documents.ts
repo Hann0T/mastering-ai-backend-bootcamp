@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
-import { authorize, requirePermission } from '../middleware/authorize';
+import { requirePermission } from '../middleware/authorize';
 import {
   createDocumentSchema,
   documentParamsSchema,
@@ -14,6 +14,7 @@ import {
   processingStatus
 } from '../controllers/document.controller';
 import { validate } from '../middleware/validate.middleware';
+import { conditionalGet } from '../middleware/etag';
 
 const router = Router();
 
@@ -64,6 +65,7 @@ router.post('/',
 router.get('/:id',
   requirePermission('documents:read'),
   validate(documentParamsSchema),
+  conditionalGet(),
   getDocumentHandler
 );
 

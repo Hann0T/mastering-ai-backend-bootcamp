@@ -18,6 +18,7 @@ import {
   getMessagesHandler
 } from '../controllers/message.controller';
 import { createMessageSchema, getMessageSchema, getMessagesSchema } from '../validators/message.validator';
+import { conditionalGet } from '../middleware/etag';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use(authenticate);
 router.get('/',
   requirePermission('conversations:read'),
   validate(getConversationsSchema),
+  conditionalGet(),
   getConversationsHandler
 );
 

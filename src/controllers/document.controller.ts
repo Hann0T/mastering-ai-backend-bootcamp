@@ -5,6 +5,8 @@ import { createDocument, deleteDocument, getDocument, listDocuments } from '../s
 import { documentQueue, queueDocumentForProcessing } from '../queues/document.queue';
 import { DOC_EVENTS } from '../events/document.events';
 import { eventBus } from '../lib/events';
+import { CACHE_TTL, cacheGet, cacheSet } from '../lib/cache';
+import type { Document } from '../../generated/prisma/client';
 
 export async function listDocumentsHandler(
   req: Request,
@@ -41,7 +43,17 @@ export async function createDocumentHandler(req: Request, res: Response, next: N
 
 export async function getDocumentHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
-    const doc = await getDocument(req.user!.id, req.params.id);
+    const documentId = req.params.id;
+    const key = `doc:${documentId}`;
+    let doc = await cacheGet<Document>(key);
+    if (doc) {
+      res.json({success: true, document: doc});
+      return;
+    }
+
+    doc = await getDocument(req.user!.id, documentId);
+
+    await cacheSet(key, doc, CACHE_TTL.DOCUMENT);
 
     res.json({ success: true, document: doc });
   } catch (error) {
