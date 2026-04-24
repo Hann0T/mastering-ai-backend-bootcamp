@@ -5,6 +5,7 @@ import { ConflictError, UnauthorizedError } from '../lib/errors';
 import { PrismaClient } from '../../generated/prisma/client';
 import { EventEmitter } from 'events';
 import type { TokenPayload } from '../lib/tokens';
+import { SECURITY_EVENTS } from '../events/security.events';
 
 type TokenService = {
   generateAccessToken: (user: { id: string, tier: string }) => string;
@@ -62,7 +63,7 @@ export class AuthService {
       where: { email: data.email.toLowerCase().trim() }
     });
     if (!user || !user.isActive) {
-      this.eventBus.emit(AUTH_EVENTS.LOGIN_FAILED, {
+      this.eventBus.emit(SECURITY_EVENTS.LOGIN_FAILED, {
         email: data.email, reason: 'User not found', deviceInfo: data.deviceInfo || 'unknown'
       });
       throw new UnauthorizedError('Invalid credentials');
@@ -70,7 +71,7 @@ export class AuthService {
 
     const isValid = await verifyPassword(data.password, user.passwordHash);
     if (!isValid) {
-      this.eventBus.emit(AUTH_EVENTS.LOGIN_FAILED, {
+      this.eventBus.emit(SECURITY_EVENTS.LOGIN_FAILED, {
         email: data.email, reason: 'wrong_password', deviceInfo: data.deviceInfo || 'unknown'
       });
       throw new UnauthorizedError('Invalid credentials');

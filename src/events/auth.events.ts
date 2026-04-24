@@ -6,7 +6,6 @@ export const AUTH_EVENTS = {
   USER_LOGGED_IN: 'auth:user-logged-in',
   USER_LOGGED_OUT: 'auth:user-logged-out',
   TOKEN_REFRESHED: 'auth:token-refreshed',
-  LOGIN_FAILED: 'auth:login-failed',
 } as const;
 
 eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: any) => {
@@ -73,15 +72,5 @@ eventBus.on(AUTH_EVENTS.USER_LOGGED_IN, async (data: any) => {
     });
   } catch (error) {
     console.error('Error handling USER_LOGGED_IN event:', error);
-  }
-});
-
-eventBus.on(AUTH_EVENTS.LOGIN_FAILED, async (data: any) => {
-  try {
-    console.warn(
-      `Failed login attempt for ${data.email} from ${data.deviceInfo}, reason: ${data.reason}`
-    );
-  } catch (error) {
-    console.error('Failed to create the welcome conversation:', error);
   }
 });
