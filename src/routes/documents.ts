@@ -15,6 +15,7 @@ import {
 } from '../controllers/document.controller';
 import { validate } from '../middleware/validate.middleware';
 import { conditionalGet } from '../middleware/etag';
+import { uploadLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -58,6 +59,7 @@ router.get('/',
 
 router.post('/',
   requirePermission('documents:create'),
+  uploadLimiter,
   validate(createDocumentSchema),
   createDocumentHandler
 );

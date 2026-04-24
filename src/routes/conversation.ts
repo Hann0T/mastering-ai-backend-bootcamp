@@ -19,6 +19,7 @@ import {
 } from '../controllers/message.controller';
 import { createMessageSchema, getMessageSchema, getMessagesSchema } from '../validators/message.validator';
 import { conditionalGet } from '../middleware/etag';
+import { chatLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -48,6 +49,7 @@ router.get('/:conversationId/messages',
 );
 
 router.post('/:conversationId/messages',
+  chatLimiter,
   validate(createMessageSchema),
   sendMessageHandler
 );
