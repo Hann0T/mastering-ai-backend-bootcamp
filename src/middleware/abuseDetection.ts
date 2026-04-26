@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { cacheRedis } from '../lib/cache';
+import { cache } from '../lib/cache';
 
 export async function trackSuspiciousActivity(
   req: Request, _: Response, next: NextFunction
@@ -13,10 +13,7 @@ export async function trackSuspiciousActivity(
     const docId: string = (req as any).params.id;
 
     if(docId) {
-      await cacheRedis.sadd(key, docId);
-      await cacheRedis.expire(key, 300); // 5 minute window
-
-      const uniqueDocs = await cacheRedis.scard(key);
+      const uniqueDocs = await cache.trackUniqueAccess(key, docId, 300); // 5 minute window
       if (uniqueDocs >= 50) {
         // TODO: send alert, email, something
         console.warn(

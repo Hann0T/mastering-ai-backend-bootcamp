@@ -1,6 +1,6 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
-import { cacheRedis } from '../lib/cache';
+import { getRedisClient } from '../lib/cache';
 import type { Request } from 'express';
 
 function createLimiter(options: {
@@ -9,14 +9,11 @@ function createLimiter(options: {
   message: string,
   keyGenerator?: (req: Request) => string
 }) {
-  return rateLimit({
+  const config = {
     windowMs: options.windowMs,
     max: options.max,
     standardHeaders: true, // RateLimit-* headers
     legacyHeaders: false,
-    store: new RedisStore({
-      sendCommand: (...args: string[]) => (cacheRedis as any).call(...args),
-    }),
     message: {
       success: false,
       error: {
@@ -25,7 +22,22 @@ function createLimiter(options: {
       }
     },
     keyGenerator: options.keyGenerator
-      || ((req: Request) => (req as any).user?.id || req.ip || 'anonymous')
+      || ((req: Request) => (req as any).user?.id || `ip:${ipKeyGenerator(req.ip!)}` || 'anonymous')
+  };
+  let store = {}
+  const redisClient = getRedisClient();
+  if (redisClient) {
+    store = {
+      store: new RedisStore({
+        sendCommand: (...args: string[]) => (redisClient as any)?.call(...args),
+      }),
+    }
+  } else {
+    console.log('Runnig on test env');
+  }
+
+  return rateLimit({
+    ...config, ...store
   });
 }
 
@@ -33,7 +45,7 @@ export const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   message: 'Too many request. Please try again later.',
-  keyGenerator: (req) => req.ip || 'anonymous'
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip!)}` || 'anonymous'
 });
 
 // General API: tier based

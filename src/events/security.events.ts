@@ -1,5 +1,5 @@
 import { eventBus } from '../lib/events';
-import { cacheRedis } from '../lib/cache';
+import { cache } from '../lib/cache';
 
 export const SECURITY_EVENTS = {
   LOGIN_FAILED: 'auth:login-failed',
@@ -8,12 +8,7 @@ export const SECURITY_EVENTS = {
 eventBus.on(SECURITY_EVENTS.LOGIN_FAILED, async (data: any) => {
   try {
     const key = `login-failures-${data.deviceInfo}`;
-    const failures = await cacheRedis.incr(key);
-
-    // set expire on first failure
-    if (failures === 1) {
-      await cacheRedis.expire(key, 900); // 15 minutes
-    }
+    const failures = await cache.incrementLoginFailures(key, 900); // 15 minutes
 
     if (failures >= 5) {
       // TODO: block, limit even more, something

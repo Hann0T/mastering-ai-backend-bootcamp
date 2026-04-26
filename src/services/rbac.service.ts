@@ -1,10 +1,10 @@
-import { CACHE_TTL, cacheGetOrSet } from '../lib/cache';
+import { CACHE_TTL, cache } from '../lib/cache';
 import { prisma } from '../lib/prisma';
 
 export async function getUserPermissions(
   userId: string
 ): Promise<Set<string>> {
-  const permissions: any = await cacheGetOrSet(
+  const permissions: any = await cache.getOrSet(
     `permissions:${userId}`,
     CACHE_TTL.PERMISSIONS,
     async () => {
