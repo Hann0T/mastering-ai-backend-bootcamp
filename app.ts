@@ -1,3 +1,4 @@
+import cors from 'cors';
 import helmet from 'helmet';
 import express from 'express';
 import apiRouter from './src/routes/api';
@@ -8,6 +9,10 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
 import { bullBoardAdapter } from './src/config/bull-board';
 import { sanitizeInput } from './src/middleware/sanitize';
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3001',
+];
 
 const app = express();
 
@@ -26,6 +31,23 @@ app.use('/webhooks',
 
 app.use(express.json());
 app.use(sanitizeInput);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  credentials: true,  // Allow cookies/auth headers
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // Cache preflight requests for 24 hours
+}));
 
 app.use(helmet({
   contentSecurityPolicy: {
