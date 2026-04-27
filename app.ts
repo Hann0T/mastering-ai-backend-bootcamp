@@ -6,6 +6,7 @@ import { errorHandler } from './src/middleware/errorHandler.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
 import { bullBoardAdapter } from './src/config/bull-board';
+import { sanitizeInput } from './src/middleware/sanitize';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/webhooks',
 );
 
 app.use(express.json());
+app.use(sanitizeInput);
 
 // routes
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
