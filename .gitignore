@@ -2,6 +2,7 @@ node_modules/
 logs/
 .env
 .env.test
+.env.local
+.env.*.local
 generated/prisma
-dev.db
-test.db
+*.db
