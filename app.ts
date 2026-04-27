@@ -1,3 +1,4 @@
+import helmet from 'helmet';
 import express from 'express';
 import apiRouter from './src/routes/api';
 import webhookRouter from './src/routes/webhooks';
@@ -26,11 +27,39 @@ app.use('/webhooks',
 app.use(express.json());
 app.use(sanitizeInput);
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      scriptSrc: ["'none'"],
+      styleSrc: ["'none'"],
+      imgSrc: ["'none'"],
+      connectSrc: ["'self'"],
+      // Allow Swagger UI if you serve it
+      // scriptSrc: ["'self'", "'unsafe-inline'"],
+      // styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
+
 // routes
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 app.use('/api/v1', apiRouter);
 
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api-docs',
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:"],
+      },
+    },
+  }),
+  swaggerUi.serve, swaggerUi.setup(swaggerSpec)
+);
+
 app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
