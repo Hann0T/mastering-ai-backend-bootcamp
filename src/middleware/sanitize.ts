@@ -29,7 +29,7 @@ export function sanitizeInput(
   req: Request, _: Response, next: NextFunction
 ) {
   if (req.body) req.body = sanitizeValue(req.body);
-  if (req.query) req.query = sanitizeValue(req.query);
+  // if (req.query) req.query = sanitizeValue(req.query); // query is read only
   if (req.params) req.params = sanitizeValue(req.params);
   next();
 }

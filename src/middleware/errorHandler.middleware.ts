@@ -29,6 +29,7 @@ export function errorHandler(
     });
   }
 
+  console.log('Unexpected error', err);
   // Programming error: this is a bug
   res.status(500).json({
     success: false,
