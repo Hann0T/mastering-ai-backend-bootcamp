@@ -9,6 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
 import { bullBoardAdapter } from './src/config/bull-board';
 import { sanitizeInput } from './src/middleware/sanitize';
+import { requestLogger } from './src/middleware/requestLogger';
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3001',
@@ -30,6 +31,7 @@ app.use('/webhooks',
 );
 
 app.use(express.json());
+app.use(requestLogger);
 app.use(sanitizeInput);
 
 app.use(cors({
