@@ -4,12 +4,18 @@ import { prisma } from '../lib/prisma';
 import { eventBus } from '../lib/events';
 import { splitIntoChunks } from '../lib/chunker';
 import { deadLetterQueue } from './dead-letter.queue';
+import { logger } from '../lib/logger';
 
 const worker = new Worker(
   'document-processing',
   async (job: Job) => {
     const { documentId, userId } = job.data;
-    console.log(`Processing document: ${documentId} (attempt ${job.attemptsMade + 1})`);
+
+    logger.info('Processing document', {
+      documentId,
+      userId,
+      attempts: job.attemptsMade + 1,
+    });
 
     const doc = await prisma.document.findUnique({
       where: { id: documentId }
@@ -76,17 +82,21 @@ const worker = new Worker(
 );
 
 worker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed: ${job.returnvalue?.chunks} chunks`);
+  logger.info('Processing document completed', {
+    jobId: job.id,
+    chunks: job.returnvalue?.chunks
+  });
 });
 
 worker.on('failed', async (job, error) => {
   if(!job) {
-    console.log(`Why I'm getting empty jobs?`);
     return;
   }
 
   if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
-    console.error(`Job ${job.id} permanently failed. Moving to DLQ.`);
+    logger.error('Processing document failed, moving to DLQ', {
+      jobId: job.id,
+    });
 
     await deadLetterQueue.add('failed-document', {
       originalJobId: job.id,
@@ -100,7 +110,9 @@ worker.on('failed', async (job, error) => {
 });
 
 worker.on('error', (error) => {
-  console.error('Worker error:', error);
+  logger.error('Processing document failed, worker error', {
+    error
+  });
 });
 
 export { worker };

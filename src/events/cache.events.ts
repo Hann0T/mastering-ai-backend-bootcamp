@@ -1,5 +1,6 @@
 import { eventBus } from '../lib/events';
 import { cache } from '../lib/cache';
+import { logger } from '../lib/logger';
 
 export const CACHE_EVENTS = {
   ROLE_ASSIGNED: 'admin:role-assigned',
@@ -10,7 +11,11 @@ export const CACHE_EVENTS = {
 eventBus.on(CACHE_EVENTS.ROLE_ASSIGNED, async (data) => {
   try {
     await cache.del(`permissions:${data.targetUserId}`);
-    console.log(`Cache busted: permissions for ${data.targetUserId}`);
+    logger.info('Permission assigned', {
+      userId: data.targetUserId,
+      assignedBy: data.assignedBy,
+      role: data.roleName
+    });
   } catch (error) {
     console.error('Failed to bust permissions cache:', error);
   }

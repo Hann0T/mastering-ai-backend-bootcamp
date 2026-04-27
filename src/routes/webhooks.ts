@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyWebhookSignature } from '../middleware/verifyWebhook';
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -41,7 +42,10 @@ router.post(
       });
     } catch (error) {
       // Don't mark processedAt. The provider will retry.
-      console.error(`Webhook ${event.id} processing failed:`, error);
+      logger.info('Webhook processing failed', {
+        eventId: event.id,
+        error
+      });
     }
   }
 );
@@ -52,7 +56,10 @@ async function processWebhookEvent(event: any) {
       // queue document
       break;
     default:
-      console.log(`Unhandled webhook event type: ${event.type}`);
+      logger.info('Webhook unhandled event', {
+        eventType: event.type,
+        eventId: event.id,
+      });
   }
 }
 

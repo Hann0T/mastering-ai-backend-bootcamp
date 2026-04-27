@@ -18,8 +18,6 @@ export const CACHE_TTL = {
 
 if(isTest) {
   console.log('cache running on tests, using in memory implementation.')
-} else {
-  console.log('cache running on dev, using redis')
 }
 
 export const cache: Cache = isTest
