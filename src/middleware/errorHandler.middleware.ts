@@ -10,14 +10,18 @@ export function errorHandler(
   // Operational error: we created this intentionally
   if (err instanceof AppError) {
     console.warn(
-      `[${err.code}] ${err.message}`,
+      `[${err.code}] ${scrubSensitiveData(err.message)}`,
       err.details ? { details: err.details } : ''
     );
     return res.status(err.statusCode).json({
       success: false,
       error: {
-        code: err.isOperational ? err.code : 'INTERNAL_ERROR',
-        message: err.isOperational ? err.message : 'Internal server error',
+        code: err.isOperational
+          ? err.code
+          : 'INTERNAL_ERROR',
+        message: err.isOperational
+          ? scrubSensitiveData(err.message)
+          : 'Internal server error',
         ...((err.isOperational && err.details) && { details: err.details })
       }
     });
@@ -33,3 +37,20 @@ export function errorHandler(
     }
   });
 };
+
+// TODO: use it
+function scrubSensitiveData(data: any): any {
+  if (typeof data !== 'string') return data;
+
+  const patterns = [
+    /Bearer [A-Za-z0-9\-._~+\/]+=*/g,  // JWT tokens
+    /sk-[A-Za-z0-9]{20,}/g,              // OpenAI keys
+    /password["']?\s*[:=]\s*["']?[^"'\s,}]+/gi, // password in any format
+  ];
+
+  let scrubbed = data;
+  for (const pattern of patterns) {
+    scrubbed = scrubbed.replace(pattern, '[REDACTED]');
+  }
+  return scrubbed;
+}
