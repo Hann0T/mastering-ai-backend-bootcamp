@@ -10,6 +10,8 @@ import { swaggerSpec } from './src/config/swagger';
 import { bullBoardAdapter } from './src/config/bull-board';
 import { sanitizeInput } from './src/middleware/sanitize';
 import { requestLogger } from './src/middleware/requestLogger';
+import { metricsMiddleware } from './src/middleware/metricsMiddleware';
+import { metricsRegistry } from './src/lib/metrics';
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3001',
@@ -66,9 +68,19 @@ app.use(helmet({
   },
 }));
 
+app.use(metricsMiddleware);
+
 // routes
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 app.use('/api/v1', apiRouter);
+
+// TODO: use auth middleware
+app.use('/admin/queues', bullBoardAdapter.getRouter());
+
+app.get('/metrics', async (_, res) => {
+  res.set('Content-Type', metricsRegistry.contentType);
+  res.send(await metricsRegistry.metrics());
+});
 
 app.use('/api-docs',
   helmet({
@@ -87,9 +99,6 @@ app.use('/api-docs',
 app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
-
-// TODO: use auth middleware
-app.use('/admin/queues', bullBoardAdapter.getRouter());
 
 app.use((req, res) => {
   res.status(404).json({
