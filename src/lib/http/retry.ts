@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios';
+import { logger } from '../logger';
 
 function isRetryable(error: AxiosError): boolean {
   // No response = network error or timeout
@@ -40,10 +41,11 @@ export async function withRetry<T>(
         ? parseInt(retryAfter) * 1000
         : baseDelayMs * Math.pow(2, attempt - 1)
 
-      console.warn(
-        `Attempt ${attempt} failed, retrying in ${delayMs}ms:`,
-        error.message
-      );
+      logger.warn(`Request failed, retrying in ${delayMs}ms`, {
+        attempt,
+        delayMs,
+        message: error.message,
+      });
 
       await delay(delayMs);
     }

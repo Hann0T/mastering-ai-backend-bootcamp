@@ -1,5 +1,6 @@
 import { eventBus } from '../lib/events';
 import { cache } from '../lib/cache';
+import { logger } from '../lib/logger';
 
 export const SECURITY_EVENTS = {
   LOGIN_FAILED: 'auth:login-failed',
@@ -12,11 +13,16 @@ eventBus.on(SECURITY_EVENTS.LOGIN_FAILED, async (data: any) => {
 
     if (failures >= 5) {
       // TODO: block, limit even more, something
-      console.warn(
-        `Security: ${failures} failed logins from ${data.deviceInfo} for ${data.email}`
-      );
+      logger.warn('Too many failed tries', {
+        failures,
+        deviceInfo: data.deviceInfo,
+        email: data.email
+      });
     }
   } catch (error) {
-    console.error('Failed to track login failure:', error);
+    logger.error('Failed to trakc login failure', {
+      deviceInfo: data.deviceInfo,
+      message: (error as any)?.message
+    });
   }
 });

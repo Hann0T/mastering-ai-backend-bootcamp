@@ -1,4 +1,5 @@
 import { eventBus } from '../lib/events';
+import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 
 export const AUTH_EVENTS = {
@@ -23,8 +24,11 @@ eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: any) => {
         }),
       },
     });
-  } catch (error) {
-    console.error('Error handling USER_REGISTERED event:', error);
+  } catch (error: any) {
+    logger.error(`Failed Handle ${AUTH_EVENTS.USER_REGISTERED} event`, {
+      userId: user.id,
+      message: error.message
+    });
   }
 });
 
@@ -36,8 +40,11 @@ eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: any) => {
         title: 'Welcome to DocuChat!',
       },
     });
-  } catch (error) {
-    console.error('Failed to create the welcome conversation:', error);
+  } catch (error: any) {
+    logger.error(`Failed to create the welcome conversation`, {
+      userId: user.id,
+      message: error.message
+    });
   }
 });
 
@@ -50,8 +57,11 @@ eventBus.on(AUTH_EVENTS.USER_REGISTERED, async (user: { email: string }) => {
     //     setTimeout(() => reject(new Error('Slack timeout')), 3000)
     //   ),
     // ]);
-  } catch (error) {
-    console.error('Slack notification failed or timed out:', error);
+  } catch (error: any) {
+    logger.error(`on ${AUTH_EVENTS.USER_REGISTERED} notification failed`, {
+      userEmail: user.email,
+      message: error.message
+    });
   }
 });
 
@@ -70,7 +80,11 @@ eventBus.on(AUTH_EVENTS.USER_LOGGED_IN, async (data: any) => {
         }),
       },
     });
-  } catch (error) {
-    console.error('Error handling USER_LOGGED_IN event:', error);
+  } catch (error: any) {
+    logger.error(`Failed to handle ${AUTH_EVENTS.USER_LOGGED_IN} event`, {
+      userId: data.userId,
+      deviceInfo: data.deviceInfo,
+      message: error.message
+    });
   }
 });

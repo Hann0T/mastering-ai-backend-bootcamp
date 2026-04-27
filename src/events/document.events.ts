@@ -1,4 +1,5 @@
 import { eventBus } from '../lib/events';
+import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 
 export const DOC_EVENTS = {
@@ -22,8 +23,12 @@ eventBus.on(DOC_EVENTS.CREATED, async (data) => {
         })
       }
     });
-  } catch (error) {
-    console.error('Failed to log document creation:', error);
+  } catch (error: any) {
+    logger.error(`Failed to log document creation`, {
+      userId: data.userId,
+      documentId: data.documentId,
+      message: error.message
+    });
   }
 });
 
@@ -42,7 +47,11 @@ eventBus.on(DOC_EVENTS.DELETED, async (data) => {
         })
       }
     });
-  } catch (error) {
-    console.error('Failed to log document deletion:', error);
+  } catch (error: any) {
+    logger.error(`Failed to log document deletion`, {
+      deletedBy: data.deletedBy,
+      documentId: data.documentId,
+      message: error.message
+    });
   }
 });

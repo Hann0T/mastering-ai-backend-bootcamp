@@ -1,4 +1,5 @@
 import { eventBus } from '../lib/events';
+import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 
 export const ADMIN_EVENTS = {
@@ -21,8 +22,12 @@ eventBus.on(ADMIN_EVENTS.ROLE_ASSIGNED, async (data) => {
         }),
       },
     });
-  } catch (error) {
-    console.error('Failed to log role assignment:', error);
+  } catch (error: any) {
+    logger.error(`Failed to log role assignment`, {
+      assignedBy: data.assignedBy,
+      targetUserId: data.targetUserId,
+      message: error.message
+    });
   }
 });
 
@@ -41,7 +46,11 @@ eventBus.on(ADMIN_EVENTS.ROLE_REVOKED, async (data) => {
         }),
       },
     });
-  } catch (error) {
-    console.error('Failed to log role revocation:', error);
+  } catch (error: any) {
+    logger.error(`Failed to log role revocation`, {
+      revokedBy: data.revokedBy,
+      targetUserId: data.targetUserId,
+      message: error.message
+    });
   }
 });

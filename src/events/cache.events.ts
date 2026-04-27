@@ -16,16 +16,26 @@ eventBus.on(CACHE_EVENTS.ROLE_ASSIGNED, async (data) => {
       assignedBy: data.assignedBy,
       role: data.roleName
     });
-  } catch (error) {
-    console.error('Failed to bust permissions cache:', error);
+  } catch (error: any) {
+    logger.error('Failed to assign permission', {
+      userId: data.targetUserId,
+      assignedBy: data.assignedBy,
+      role: data.roleName,
+      message: error.message
+    });
   }
 });
 
 eventBus.on(CACHE_EVENTS.ROLE_REVOKED, async (data) => {
   try {
     await cache.del(`permissions:${data.targetUserId}`);
-  } catch (error) {
-    console.error('Failed to bust permissions cache:', error);
+  } catch (error: any) {
+    logger.error('Failed to revoke permission', {
+      role: data.roleName,
+      revokedBy: data.revokedBy,
+      userId: data.targetUserId,
+      message: error.message
+    });
   }
 });
 
@@ -33,7 +43,10 @@ eventBus.on(CACHE_EVENTS.ROLE_REVOKED, async (data) => {
 eventBus.on(CACHE_EVENTS.DOC_DELETED, async (data) => {
   try {
     await cache.del(`doc:${data.documentId}`);
-  } catch (error) {
-    console.error('Failed to bust document cache:', error);
+  } catch (error: any) {
+    logger.error('Failed to delete document cache', {
+      documentId: data.documentId,
+      message: error.message
+    });
   }
 });

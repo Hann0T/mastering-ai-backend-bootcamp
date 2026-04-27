@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../lib/errors';
+import { logger } from '../lib/logger';
 
 export function errorHandler(
   err: any,
@@ -9,10 +10,11 @@ export function errorHandler(
 ) {
   // Operational error: we created this intentionally
   if (err instanceof AppError) {
-    console.warn(
-      `[${err.code}] ${scrubSensitiveData(err.message)}`,
-      err.details ? { details: err.details } : ''
-    );
+    logger.warn('App error', {
+      message: scrubSensitiveData(err.message),
+      code: err.code,
+      details: err.details,
+    });
     return res.status(err.statusCode).json({
       success: false,
       error: {
@@ -28,7 +30,6 @@ export function errorHandler(
   }
 
   // Programming error: this is a bug
-  console.error('Unhandled error:', err);
   res.status(500).json({
     success: false,
     error: {
