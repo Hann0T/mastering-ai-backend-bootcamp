@@ -4,6 +4,7 @@ import express from 'express';
 import apiRouter from './src/routes/api';
 import webhookRouter from './src/routes/webhooks';
 import logger from './src/middleware/logger';
+import healthRouter from './src/routes/health';
 import { errorHandler } from './src/middleware/errorHandler.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/config/swagger';
@@ -99,6 +100,8 @@ app.use('/api-docs',
 app.get('/api/docs.json', (_, res) => {
   res.json(swaggerSpec);
 });
+
+app.use(healthRouter);
 
 app.use((req, res) => {
   res.status(404).json({
