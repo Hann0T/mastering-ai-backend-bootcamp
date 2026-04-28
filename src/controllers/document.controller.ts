@@ -3,8 +3,6 @@ import { prisma } from '../lib/prisma';
 import { NotFoundError } from '../lib/errors';
 import { createDocument, deleteDocument, getDocument, listDocuments } from '../services/document.service';
 import { documentQueue, queueDocumentForProcessing } from '../queues/document.queue';
-import { DOC_EVENTS } from '../events/document.events';
-import { eventBus } from '../lib/events';
 import { CACHE_TTL, cache } from '../lib/cache';
 import type { Document } from '../../generated/prisma/client';
 
@@ -24,16 +22,16 @@ export async function listDocumentsHandler(
 export async function createDocumentHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const { title, content } = req.body;
-    const doc = await createDocument(req.user!.id, title, content);
+    const correlationId = (req as any).correlationId;
+    const doc = await createDocument({
+      userId: req.user!.id, title, content
+    }, correlationId);
 
-    const jobId = await queueDocumentForProcessing(doc.id, req.user!.id);
-
-    eventBus.emit(DOC_EVENTS.CREATED, {
-      userId: req.user!.id,
-      documentId: doc.id,
-      title: doc.title,
-      fileSizeBytes: doc.fileSizeBytes,
-    });
+    const jobId = await queueDocumentForProcessing(
+      doc.id,
+      req.user!.id,
+      correlationId
+    );
 
     res.status(202).json({ success: true, document: doc, jobId });
   } catch (error) {

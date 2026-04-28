@@ -9,12 +9,13 @@ import { logger } from '../lib/logger';
 const worker = new Worker(
   'document-processing',
   async (job: Job) => {
-    const { documentId, userId } = job.data;
+    const { documentId, userId, correlationId } = job.data;
 
     logger.info('Processing document', {
       documentId,
       userId,
       attempts: job.attemptsMade + 1,
+      correlationId,
     });
 
     const doc = await prisma.document.findUnique({
@@ -84,7 +85,8 @@ const worker = new Worker(
 worker.on('completed', (job) => {
   logger.info('Processing document completed', {
     jobId: job.id,
-    chunks: job.returnvalue?.chunks
+    chunks: job.returnvalue?.chunks,
+    correlationId: job.data?.correlationId,
   });
 });
 
@@ -96,6 +98,7 @@ worker.on('failed', async (job, error) => {
   if (job.attemptsMade >= (job.opts.attempts ?? 3)) {
     logger.error('Processing document failed, moving to DLQ', {
       jobId: job.id,
+      correlationId: job.data?.correlationId,
     });
 
     await deadLetterQueue.add('failed-document', {

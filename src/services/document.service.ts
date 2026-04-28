@@ -1,6 +1,7 @@
 import { DOC_EVENTS } from "../events/document.events";
 import { NotFoundError } from "../lib/errors";
 import { eventBus } from "../lib/events";
+import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { getUserPermissions } from "./rbac.service";
 
@@ -81,7 +82,18 @@ export async function getDocument(userId: string, documentId: string) {
   return doc;
 }
 
-export async function createDocument(userId: string, title: string, content: string) {
+export async function createDocument(data: {
+  userId: string;
+  title: string;
+  content: string;
+}, correlationId?: string) {
+  const { userId, title, content } = data;
+  logger.info('Creating document', {
+    correlationId: correlationId,
+    userId,
+    title,
+  });
+
   const doc = await prisma.document.create({
     data: {
       title: title,
@@ -91,6 +103,13 @@ export async function createDocument(userId: string, title: string, content: str
       fileSizeBytes: 1024,
       user: { connect: { id: userId } }
     }
+  });
+
+  eventBus.emit(DOC_EVENTS.CREATED, {
+    userId,
+    documentId: doc.id,
+    title: doc.title,
+    fileSizeBytes: doc.fileSizeBytes,
   });
 
   return doc;
