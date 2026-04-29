@@ -66,7 +66,7 @@ model Document {
   chunks        Chunk[]
   messages      Message[]
 
-  @@index([userId])
+  @@index([userId, deletedAt])
   @@index([status])
 }
 
