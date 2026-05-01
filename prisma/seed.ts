@@ -1,11 +1,6 @@
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import { PrismaClient } from '../generated/prisma/client';
 import type { User } from '../generated/prisma/client';
+import { prisma } from '../src/lib/prisma';
 import bycrypt from 'bcryptjs';
-
-const connectionString = `${process.env.DATABASE_URL}`;
-const adapter = new PrismaBetterSqlite3({ url: connectionString });
-const prisma = new PrismaClient({ adapter });
 
 const SALT = 12;
 
@@ -119,7 +114,7 @@ async function assignRoleToUser(user: User, roleName: string) {
   const role = await prisma.role.findFirst({
     where: { name: roleName }
   });
-  if(!role) throw new Error('Role not found');
+  if (!role) throw new Error('Role not found');
 
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId: user.id, roleId: role.id } },
