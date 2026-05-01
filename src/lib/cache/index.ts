@@ -1,9 +1,6 @@
 import crypto from 'crypto';
 import type { Cache } from './cache.interface';
-import { Memory } from './memory.cache';
 import { Redis } from './redis.cache';
-
-const isTest = process.env.NODE_ENV === 'test';
 
 const port = process.env.REDIS_PORT || '6379';
 const host = process.env.REDIS_HOST || 'localhost';
@@ -16,13 +13,7 @@ export const CACHE_TTL = {
   RAG_RESULT: 3600,       // 1 hour
 } as const;
 
-if(isTest) {
-  console.log('cache running on tests, using in memory implementation.')
-}
-
-export const cache: Cache = isTest
-  ? new Memory()
-  : new Redis(host, port, 'docuchat:');
+export const cache: Cache = new Redis(host, port, 'docuchat:');
 
 export function hashKey(...parts: string[]): string {
   const data = parts.join(':');
@@ -30,9 +21,5 @@ export function hashKey(...parts: string[]): string {
 }
 
 export function getRedisClient() {
-  if (cache instanceof Redis) {
-    return cache.store;
-  }
-
-  return null;
+  return cache instanceof Redis ? cache.store : null;
 }
