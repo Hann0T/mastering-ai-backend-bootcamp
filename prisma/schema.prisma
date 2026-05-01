@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -76,6 +76,8 @@ model Chunk {
   index      Int
   content    String
   tokenCount Int
+  embedding  Unsupported("vector(1536)")? // Vector embedding
+  // embedding_model String // To know which model in case we need to generate embeddings with other model
   createdAt  DateTime @default(now())
 
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
