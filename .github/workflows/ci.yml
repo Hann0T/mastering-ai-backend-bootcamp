@@ -11,6 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     environment: docuChat
 
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,20 +53,22 @@ jobs:
 
       - name: Run migrations
         env:
-          DATABASE_URL: file:${{ github.workspace }}/test.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: npx prisma migrate deploy
 
       - name: Run seed
         env:
-          DATABASE_URL: file:${{ github.workspace }}/test.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: npx prisma db seed
 
       - name: Run tests
         env:
-          DATABASE_URL: file:${{ github.workspace }}/test.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           NODE_ENV: test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
         run: npm run test:coverage
 
       - name: Upload coverage report
