@@ -1,9 +1,5 @@
 import 'dotenv/config';
-import './src/events/auth.events';
-import './src/events/admin.events';
-import './src/events/document.events';
-import './src/events/cache.events';
-import './src/events/security.events';
+import './src/events';
 import './src/queues/document.worker';
 import './src/queues/embedding.worker';
 
