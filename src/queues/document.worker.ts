@@ -2,14 +2,17 @@ import { Worker, Job } from 'bullmq';
 import { redisConnection } from './connection';
 import { prisma } from '../lib/prisma';
 import { eventBus } from '../lib/events';
-import { splitIntoChunks } from '../lib/chunker';
+import { chunkDocument } from '../lib/chunker';
 import { deadLetterQueue } from './dead-letter.queue';
 import { logger } from '../lib/logger';
+import { detectDocumentType, extractTextFromDocument } from '../lib/documentExtractors';
+import { generateEmbeddingsBatchWithCache, storeEmbeddingsInChunks } from '../services/embedding.service';
 
 const worker = new Worker(
   'document-processing',
   async (job: Job) => {
     const { documentId, userId, correlationId } = job.data;
+    const startTime = Date.now();
 
     logger.info('Processing document', {
       documentId,
@@ -18,53 +21,107 @@ const worker = new Worker(
       correlationId,
     });
 
-    const doc = await prisma.document.findUnique({
-      where: { id: documentId }
-    });
-    if (!doc) { throw new Error("Document not found") }
-
-    await prisma.document.update({
-      where: { id: documentId },
-      data: {
-        status: 'processing'
-      }
-    });
-
     try {
-      await job.updateProgress(10);
+      // Get document
+      const doc = await prisma.document.findUnique({
+        where: { id: documentId }
+      });
+      if (!doc) { throw new Error("Document not found") }
 
-      const chunks = splitIntoChunks(doc.content, 500);
-      await job.updateProgress(40);
+      await prisma.document.update({
+        where: { id: documentId },
+        data: {
+          status: 'processing'
+        }
+      });
 
+      await job.updateProgress(5);
+
+      // 1. Extract text
+      const format = detectDocumentType(doc.filename);
+      const { text, pageCount } = await extractTextFromDocument(doc.content, format);
+      await job.updateProgress(15);
+
+      logger.info('Text extracted', {
+        documentId, userId, correlationId, format,
+        textLength: text.length, pageCount
+      });
+
+      // 2. Chunk document
+      const chunks = chunkDocument(doc.content, {
+        maxTokens: 500,
+        overlapTokens: 50,
+        minChunkTokens: 50
+      });
+      await job.updateProgress(30);
+
+      logger.info('Document chunked', {
+        documentId, userId, correlationId,
+        chunkCount: chunks.length,
+        avgTokens: Math.round(
+          chunks.reduce((sum, c) => sum + c.tokenEstimate, 0) / chunks.length
+        )
+      });
+
+      // 3. Store chunks in DB
       await prisma.$transaction(async (tx) => {
-        // in case of retry
+        // in case of retry, idempotency is important
         await tx.chunk.deleteMany({ where: { documentId } });
-
         await tx.chunk.createMany({
-          data: chunks.map((text, index) => ({
+          data: chunks.map((chunk) => ({
             documentId,
-            index,
-            content: text,
-            // tokenCount: estimateTokens(text)
-            tokenCount: 0,
+            index: chunk.index,
+            content: chunk.text,
+            tokenCount: chunk.tokenEstimate,
           }))
         });
-
-        await tx.document.update({
-          where: { id: documentId },
-          data: { status: 'ready', chunkCount: chunks.length }
-        });
-
-        await job.updateProgress(100);
-
-        eventBus.emit('doc:processed', {
-          documentId,
-          userId,
-          chunkCount: chunks.length,
-        });
-
-        return { success: true, chunks: chunks.length };
       });
+      await job.updateProgress(50);
+
+      // 4. Generate embeddings
+      const chunkTexts = chunks.map(c => c.text);
+      const embdeddings = await generateEmbeddingsBatchWithCache(chunkTexts);
+      await job.updateProgress(85);
+
+      // 5. Store embeddings in DB
+      const storedChunks = await prisma.chunk.findMany({
+        where: { documentId },
+        orderBy: { index: 'asc' },
+        select: { id: true }
+      });
+
+      await storeEmbeddingsInChunks(
+        storedChunks.map((chunk, i) => ({
+          id: chunk.id,
+          embedding: embdeddings[i] || [],
+        }))
+      );
+      await job.updateProgress(95);
+
+      // 6. Mark document as ready
+      await prisma.document.update({
+        where: { id: documentId },
+        data: { status: 'ready', chunkCount: chunks.length }
+      });
+      await job.updateProgress(100);
+
+      const duration = Date.now() - startTime;
+
+      eventBus.emit('doc:processed', {
+        documentId,
+        userId,
+        correlationId,
+        chunkCount: chunks.length,
+        durationMs: duration,
+        format, pageCount
+      });
+
+      logger.info('Document processing complete', {
+        documentId, userId, correlationId,
+        chunkCount: chunks.length, durationMs: duration
+      });
+
+      return { success: true, chunks: chunks.length, durationMs: duration };
     } catch (error) {
       if (job.attemptsMade >= (job.opts.attempts ?? 3) - 1) {
         await prisma.document.update({
@@ -72,6 +129,12 @@ const worker = new Worker(
           data: { status: 'failed', error: (error as Error).message }
         });
       }
+
+      logger.info('Document processing failed', {
+        documentId, userId, correlationId,
+        error: (error as Error).message,
+        attempt: job.attemptsMade + 1,
+      });
 
       throw error; // for BullMQ retry
     }
@@ -91,7 +154,7 @@ worker.on('completed', (job) => {
 });
 
 worker.on('failed', async (job, error) => {
-  if(!job) {
+  if (!job) {
     return;
   }
 
