@@ -7,6 +7,7 @@ import { deadLetterQueue } from './dead-letter.queue';
 import { logger } from '../lib/logger';
 import { detectDocumentType, extractTextFromDocument } from '../lib/documentExtractors';
 import { generateEmbeddingsBatchWithCache, storeEmbeddingsInChunks } from '../services/embedding.service';
+import { chunksPerDocument, ingestionDuration } from '../lib/metrics';
 
 const worker = new Worker(
   'document-processing',
@@ -120,6 +121,10 @@ const worker = new Worker(
         documentId, userId, correlationId,
         chunkCount: chunks.length, durationMs: duration
       });
+
+      // Update Prometheus metrics
+      ingestionDuration.observe({ format }, duration / 1000); // Convert ms to seconds for Prometheus
+      chunksPerDocument.observe(chunks.length);
 
       return { success: true, chunks: chunks.length, durationMs: duration };
     } catch (error) {

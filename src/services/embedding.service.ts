@@ -1,7 +1,7 @@
 import { cache, CACHE_TTL } from "../lib/cache";
-import { eventBus } from "../lib/events";
 import { openaiBreaker } from "../lib/http/openai.breaker";
 import { logger } from "../lib/logger";
+import { embeddingCacheHitRate } from "../lib/metrics";
 import { prisma } from "../lib/prisma";
 import crypto from 'crypto';
 
@@ -27,6 +27,9 @@ export async function generateEmbeddingWithCache(
       inputLength: text.length,
       dimensions: cached.length,
     });
+
+    embeddingCacheHitRate.inc();
+
     return cached;
   }
 
@@ -63,6 +66,8 @@ export async function generateEmbeddingsBatchWithCache(
         model: EMBEDDING_MODEL,
         hash: hash.substring(0, 8), // log first 8 chars of hash for traceability
       });
+
+      embeddingCacheHitRate.inc();
     } else {
       unCached.push({ index: i, text });
     }
